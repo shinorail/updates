@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>更新履歴 | Shinorail</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
+
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
@@ -31,16 +31,12 @@
       padding-left: 10px;
       font-size: 22px;
     }
-    .update-meta {
-      font-size: 13px;
-      color: #666;
-      text-align: right;
-    }
     #logSelect {
       padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 14px;
+      margin-top: 10px;
     }
     #logContent {
       margin-top: 20px;
@@ -70,9 +66,7 @@
   <div class="update-container">
     <div class="update-header">
       <h1>更新履歴</h1>
-      <div class="update-meta">
-        Shinorail Official Update Log
-      </div>
+      <div class="update-meta">Shinorail Official Update Log</div>
     </div>
 
     <p>過去の更新内容を日付ごとに確認できます。</p>
@@ -90,6 +84,7 @@
     const select = document.getElementById("logSelect");
     const content = document.getElementById("logContent");
 
+    // logs.json を読み込む
     async function loadLogs() {
       const res = await fetch("./logs.json");
       const logs = await res.json();
@@ -104,6 +99,16 @@
 
     loadLogs();
 
+    // Markdown → HTML（簡易変換）
+    function mdToHtml(md) {
+      return md
+        .replace(/^# (.*$)/gim, "<h2>$1</h2>")
+        .replace(/^## (.*$)/gim, "<h3>$1</h3>")
+        .replace(/^- (.*$)/gim, "<li>$1</li>")
+        .replace(/\n/g, "<br>");
+    }
+
+    // 選択されたMDファイルを読み込む
     select.addEventListener("change", async () => {
       const file = select.value;
       if (!file) {
@@ -114,11 +119,7 @@
       const res = await fetch(`./logs/${file}`);
       const text = await res.text();
 
-      content.innerHTML = text
-        .replace(/^# (.*$)/gim, "<h2>$1</h2>")
-        .replace(/^## (.*$)/gim, "<h3>$1</h3>")
-        .replace(/^- (.*$)/gim, "<li>$1</li>")
-        .replace(/\n/g, "<br>");
+      content.innerHTML = mdToHtml(text);
     });
   </script>
 </body>

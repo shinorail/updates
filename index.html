@@ -31,12 +31,13 @@
       padding-left: 10px;
       font-size: 22px;
     }
-    #logSelect {
+    #logSelect, #searchInput {
       padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 14px;
       margin-top: 10px;
+      width: 100%;
     }
     #logContent {
       margin-top: 20px;
@@ -52,6 +53,13 @@
     }
     #logContent li {
       margin-left: 20px;
+    }
+    .latest-box {
+      background: #eaf4ff;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-left: 5px solid #0078d4;
     }
     .back-link {
       display: inline-block;
@@ -69,7 +77,9 @@
       <div class="update-meta">Shinorail Official Update Log</div>
     </div>
 
-    <p>過去の更新内容を日付ごとに確認できます。</p>
+    <div id="latestUpdate" class="latest-box"></div>
+
+    <input id="searchInput" type="text" placeholder="キーワード検索（例：篠ノ井、UI、ログイン）">
 
     <select id="logSelect">
       <option value="">日付を選択してください</option>
@@ -83,11 +93,16 @@
   <script>
     const select = document.getElementById("logSelect");
     const content = document.getElementById("logContent");
+    const searchInput = document.getElementById("searchInput");
+    const latestBox = document.getElementById("latestUpdate");
 
-    // logs.json を読み込む
+    let logs = [];
+
     async function loadLogs() {
       const res = await fetch("./logs.json");
-      const logs = await res.json();
+      logs = await res.json();
+
+      logs.sort().reverse(); // 最新順に並べる
 
       logs.forEach(file => {
         const option = document.createElement("option");
@@ -95,11 +110,12 @@
         option.textContent = file.replace(".md", "").replace(/-/g, "/");
         select.appendChild(option);
       });
+
+      latestBox.innerHTML = `最新更新：<strong>${logs[0].replace(".md", "").replace(/-/g, "/")}</strong>`;
     }
 
     loadLogs();
 
-    // Markdown → HTML（簡易変換）
     function mdToHtml(md) {
       return md
         .replace(/^# (.*$)/gim, "<h2>$1</h2>")
@@ -108,7 +124,6 @@
         .replace(/\n/g, "<br>");
     }
 
-    // 選択されたMDファイルを読み込む
     select.addEventListener("change", async () => {
       const file = select.value;
       if (!file) {
@@ -120,6 +135,29 @@
       const text = await res.text();
 
       content.innerHTML = mdToHtml(text);
+    });
+
+    searchInput.addEventListener("input", async () => {
+      const keyword = searchInput.value.trim();
+      if (!keyword) {
+        content.innerHTML = "";
+        return;
+      }
+
+      let results = "";
+
+      for (const file of logs) {
+        const res = await fetch(`./logs/${file}`);
+        const text = await res.text();
+
+        if (text.includes(keyword)) {
+          results += `<h3>${file.replace(".md", "").replace(/-/g, "/")}</h3>`;
+          results += mdToHtml(text);
+          results += "<hr>";
+        }
+      }
+
+      content.innerHTML = results || "一致する更新はありません。";
     });
   </script>
 </body>

@@ -43,16 +43,19 @@
       margin-top: 20px;
       line-height: 1.7;
     }
-    #logContent h2 {
-      margin-top: 10px;
-      font-size: 18px;
+    .tag-box {
+      margin-top: 15px;
+      margin-bottom: 10px;
     }
-    #logContent h3 {
-      margin-top: 8px;
-      font-size: 16px;
-    }
-    #logContent li {
-      margin-left: 20px;
+    .tag {
+      display: inline-block;
+      background: #eaf4ff;
+      color: #0078d4;
+      padding: 6px 10px;
+      margin: 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
     }
     .latest-box {
       background: #eaf4ff;
@@ -85,6 +88,8 @@
       <option value="">日付を選択してください</option>
     </select>
 
+    <div class="tag-box" id="tagBox"></div>
+
     <div id="logContent"></div>
 
     <a class="back-link" href="../index.html">← メインサイトへ戻る</a>
@@ -95,6 +100,7 @@
     const content = document.getElementById("logContent");
     const searchInput = document.getElementById("searchInput");
     const latestBox = document.getElementById("latestUpdate");
+    const tagBox = document.getElementById("tagBox");
 
     let logs = [];
 
@@ -102,16 +108,31 @@
       const res = await fetch("./logs.json");
       logs = await res.json();
 
-      logs.sort().reverse(); // 最新順に並べる
+      // 最新順に並べる
+      logs.sort((a, b) => b.file.localeCompare(a.file));
 
-      logs.forEach(file => {
+      // 最新更新表示
+      latestBox.innerHTML = `最新更新：<strong>${logs[0].file.replace(".md", "").replace(/-/g, "/")}</strong>`;
+
+      // 選択メニュー生成
+      logs.forEach(item => {
         const option = document.createElement("option");
-        option.value = file;
-        option.textContent = file.replace(".md", "").replace(/-/g, "/");
+        option.value = item.file;
+        option.textContent = item.file.replace(".md", "").replace(/-/g, "/");
         select.appendChild(option);
       });
 
-      latestBox.innerHTML = `最新更新：<strong>${logs[0].replace(".md", "").replace(/-/g, "/")}</strong>`;
+      // タグ一覧生成
+      const tagSet = new Set();
+      logs.forEach(item => item.tags.forEach(tag => tagSet.add(tag)));
+
+      tagSet.forEach(tag => {
+        const tagEl = document.createElement("span");
+        tagEl.className = "tag";
+        tagEl.textContent = tag;
+        tagEl.onclick = () => filterByTag(tag);
+        tagBox.appendChild(tagEl);
+      });
     }
 
     loadLogs();
@@ -124,6 +145,7 @@
         .replace(/\n/g, "<br>");
     }
 
+    // 日付選択
     select.addEventListener("change", async () => {
       const file = select.value;
       if (!file) {
@@ -137,6 +159,25 @@
       content.innerHTML = mdToHtml(text);
     });
 
+    // タグフィルター
+    async function filterByTag(tag) {
+      let results = "";
+
+      for (const item of logs) {
+        if (item.tags.includes(tag)) {
+          const res = await fetch(`./logs/${item.file}`);
+          const text = await res.text();
+
+          results += `<h3>${item.file.replace(".md", "").replace(/-/g, "/")}（タグ：${tag}）</h3>`;
+          results += mdToHtml(text);
+          results += "<hr>";
+        }
+      }
+
+      content.innerHTML = results || "一致する更新はありません。";
+    }
+
+    // キーワード検索
     searchInput.addEventListener("input", async () => {
       const keyword = searchInput.value.trim();
       if (!keyword) {
@@ -146,12 +187,12 @@
 
       let results = "";
 
-      for (const file of logs) {
-        const res = await fetch(`./logs/${file}`);
+      for (const item of logs) {
+        const res = await fetch(`./logs/${item.file}`);
         const text = await res.text();
 
         if (text.includes(keyword)) {
-          results += `<h3>${file.replace(".md", "").replace(/-/g, "/")}</h3>`;
+          results += `<h3>${item.file.replace(".md", "").replace(/-/g, "/")}</h3>`;
           results += mdToHtml(text);
           results += "<hr>";
         }
